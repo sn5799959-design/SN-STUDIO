@@ -1,148 +1,91 @@
-export default async (req) => {
-  // CORS
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
+import { InferenceClient } from "@huggingface/inference";
+
+export default async (request) => {
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json",
+  };
+
+  if (request.method === "OPTIONS") {
+    return new Response("", {
       status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
+      headers,
     });
   }
 
-  if (req.method !== "POST") {
+  if (request.method !== "POST") {
     return new Response(
       JSON.stringify({
-        error: "Only POST requests are allowed.",
+        success: false,
+        error: "Method not allowed.",
       }),
       {
         status: 405,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers,
       }
     );
   }
 
   try {
-    const token = Netlify.env.get("HF_TOKEN");
+    const token = process.env.HF_TOKEN;
 
     if (!token) {
-      return new Response(
-        JSON.stringify({
-          error: "HF_TOKEN is not configured.",
-        }),
-        {
-          status: 500,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+      throw new Error("HF_TOKEN is not configured in Netlify.");
     }
 
-    const formData = await req.formData();
-    const image = formData.get("image");
+    const body = await request.json();
 
-    if (!image) {
-      return new Response(
-        JSON.stringify({
-          error: "No image was uploaded.",
-        }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+    if (!body.image) {
+      throw new Error("No image was received.");
     }
 
-    const imageBuffer = await image.arrayBuffer();
+    const imageData = body.image;
 
-    const response = await fetch(
-      "https://router.huggingface.co/fal-ai/fal-ai/imageutils-v2",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": image.type || "image/png",
-        },
-        body: imageBuffer,
-      }
-    );
+    const base64 = imageData.includes(",")
+      ? imageData.split(",")[1]
+      : imageData;
 
-    if (!response.ok) {
-      const errorText = await response.text();
+    const imageBuffer = Buffer.from(base64, "base64");
 
-      console.error(
-        "Background removal error:",
-        errorText
-      );
+    const client = new InferenceClient(token);
 
-      return new Response(
-        JSON.stringify({
-          error: "Background removal failed.",
-          details: errorText,
-        }),
-        {
-          status: response.status,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
+    const result = await client.imageSegmentation({
+      model: "briaai/RMBG-2.0",
+      provider: "fal-ai",
+      data: imageBuffer,
+    });
+
+    if (!result || !result.length) {
+      throw new Error(
+        "Hugging Face returned no segmentation mask."
       );
     }
-
-    const contentType =
-      response.headers.get("content-type") ||
-      "image/png";
-
-    const outputBuffer = await response.arrayBuffer();
-
-    const base64 = Buffer.from(outputBuffer).toString(
-      "base64"
-    );
-
-    const resultImage =
-      `data:${contentType};base64,${base64}`;
 
     return new Response(
       JSON.stringify({
         success: true,
-        image: resultImage,
+        result,
       }),
       {
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers,
       }
     );
   } catch (error) {
-    console.error(
-      "Background remover function error:",
-      error
-    );
+    console.error("Background removal error:", error);
 
     return new Response(
       JSON.stringify({
+        success: false,
         error:
-          "Something went wrong while removing the background.",
-        details: error.message,
+          error?.message ||
+          "Background removal failed.",
       }),
       {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers,
       }
     );
   }
