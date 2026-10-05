@@ -42,7 +42,6 @@ export default async (request) => {
     }
 
     const imageData = body.image;
-
     const base64 = imageData.includes(",")
       ? imageData.split(",")[1]
       : imageData;
