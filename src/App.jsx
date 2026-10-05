@@ -18,12 +18,6 @@ const tools = [
   ["Video Editor", "Build your next video", "▶"],
 ];
 
-const demoImages = [
-  "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80",
-];
-
 function App() {
   const [active, setActive] = useState("Dashboard");
   const [notice, setNotice] = useState("");
@@ -51,7 +45,8 @@ function App() {
     setActive("Dashboard");
   };
 
-  const generateImage = () => {
+  // REAL AI IMAGE GENERATION
+  const generateImage = async () => {
     if (!prompt.trim()) {
       action("Please enter a prompt first.");
       return;
@@ -60,14 +55,42 @@ function App() {
     setGenerating(true);
     setGeneratedImage("");
 
-    setTimeout(() => {
-      const randomImage =
-        demoImages[Math.floor(Math.random() * demoImages.length)];
+    try {
+      const response = await fetch(
+        "/.netlify/functions/generate-image",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: prompt.trim(),
+            style,
+            aspectRatio: ratio,
+          }),
+        }
+      );
 
-      setGeneratedImage(randomImage);
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error || "Image generation failed."
+        );
+      }
+
+      setGeneratedImage(data.image);
+      action("AI image generated successfully! ✦");
+    } catch (error) {
+      console.error("Image generation error:", error);
+
+      action(
+        error.message ||
+          "Image generation failed. Please try again."
+      );
+    } finally {
       setGenerating(false);
-      action("Preview generated successfully.");
-    }, 1800);
+    }
   };
 
   const downloadImage = async () => {
@@ -81,7 +104,7 @@ function App() {
       const link = document.createElement("a");
 
       link.href = url;
-      link.download = "sn-studio-ai-image.jpg";
+      link.download = "sn-studio-ai-image.png";
 
       document.body.appendChild(link);
       link.click();
@@ -95,23 +118,37 @@ function App() {
     }
   };
 
+  // =========================================================
+  // AI IMAGE STUDIO
+  // =========================================================
+
   if (aiStudio) {
     return (
       <div className="app-shell">
 
+        {/* SIDEBAR */}
         <aside className="sidebar">
+
           <div className="brand">
             <div className="brand-mark">SN</div>
 
             <div>
-              <div className="brand-name">SN STUDIO</div>
-              <div className="brand-sub">Creative workspace</div>
+              <div className="brand-name">
+                SN STUDIO
+              </div>
+
+              <div className="brand-sub">
+                Creative workspace
+              </div>
             </div>
           </div>
 
-          <div className="workspace-label">WORKSPACE</div>
+          <div className="workspace-label">
+            WORKSPACE
+          </div>
 
           <nav className="nav-list">
+
             {nav.map(([label, icon]) => (
               <button
                 key={label}
@@ -119,55 +156,96 @@ function App() {
                   active === label ? "selected" : ""
                 }`}
                 onClick={() => {
+
                   if (label === "Dashboard") {
                     closeAIImage();
+
                   } else if (label === "AI Tools") {
                     setActive("AI Tools");
+
                   } else {
-                    action(`${label} workspace coming soon.`);
+                    action(
+                      `${label} workspace coming soon.`
+                    );
                   }
+
                 }}
               >
-                <span className="nav-icon">{icon}</span>
+                <span className="nav-icon">
+                  {icon}
+                </span>
+
                 <span>{label}</span>
               </button>
             ))}
+
           </nav>
 
           <div className="sidebar-spacer" />
 
           <button
             className="nav-item"
-            onClick={() => action("Settings coming soon.")}
+            onClick={() =>
+              action("Settings coming soon.")
+            }
           >
-            <span className="nav-icon">⚙</span>
+            <span className="nav-icon">
+              ⚙
+            </span>
+
             <span>Settings</span>
           </button>
 
           <div className="profile-card">
-            <div className="avatar">S</div>
 
-            <div className="profile-copy">
-              <strong>Sangram</strong>
-              <span>Free workspace</span>
+            <div className="avatar">
+              S
             </div>
 
-            <span className="dots">•••</span>
+            <div className="profile-copy">
+
+              <strong>
+                Sangram
+              </strong>
+
+              <span>
+                Free workspace
+              </span>
+
+            </div>
+
+            <span className="dots">
+              •••
+            </span>
+
           </div>
+
         </aside>
 
+        {/* MAIN CONTENT */}
         <main className="main-content">
 
           <header className="topbar">
+
             <div>
-              <div className="eyebrow">AI CREATIVE TOOL</div>
-              <h1>AI Image Studio</h1>
+
+              <div className="eyebrow">
+                AI CREATIVE TOOL
+              </div>
+
+              <h1>
+                AI Image Studio
+              </h1>
+
             </div>
 
             <div className="top-actions">
+
               <button
                 className="search-btn"
-                onClick={() => action("Search coming soon.")}
+                onClick={() =>
+                  action("Search coming soon.")
+                }
               >
                 ⌕ Search
                 <kbd>Ctrl K</kbd>
@@ -175,18 +253,24 @@ function App() {
 
               <button
                 className="upgrade-btn"
-                onClick={() => action("Upgrade system coming soon.")}
+                onClick={() =>
+                  action("Upgrade system coming soon.")
+                }
               >
                 Upgrade
               </button>
+
             </div>
+
           </header>
 
+          {/* AI WORKSPACE */}
           <section className="ai-workspace">
 
             <div className="ai-header">
 
               <div>
+
                 <button
                   className="text-btn"
                   onClick={closeAIImage}
@@ -194,11 +278,15 @@ function App() {
                   ← Back to Dashboard
                 </button>
 
-                <h2>Create with AI</h2>
+                <h2>
+                  Create with AI
+                </h2>
 
                 <p>
-                  Turn your imagination into visuals with SN STUDIO.
+                  Turn your imagination into visuals
+                  with SN STUDIO.
                 </p>
+
               </div>
 
               <div className="ai-badge">
@@ -209,21 +297,26 @@ function App() {
 
             <div className="ai-grid">
 
+              {/* CONTROLS */}
               <div className="ai-controls">
 
                 <div className="control-card">
 
-                  <label>Prompt</label>
+                  <label>
+                    Prompt
+                  </label>
 
                   <textarea
                     value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
+                    onChange={(e) =>
+                      setPrompt(e.target.value)
+                    }
                     placeholder="Describe the image you want to create..."
                   />
 
                   <div className="prompt-hint">
-                    Example: A futuristic city at sunset, cinematic lighting,
-                    ultra detailed
+                    Example: A futuristic city at sunset,
+                    cinematic lighting, ultra detailed
                   </div>
 
                 </div>
@@ -231,33 +324,74 @@ function App() {
                 <div className="control-row">
 
                   <div className="control-card compact">
-                    <label>Style</label>
+
+                    <label>
+                      Style
+                    </label>
 
                     <select
                       value={style}
-                      onChange={(e) => setStyle(e.target.value)}
+                      onChange={(e) =>
+                        setStyle(e.target.value)
+                      }
                     >
-                      <option>Cinematic</option>
-                      <option>Photorealistic</option>
-                      <option>Digital Art</option>
-                      <option>Anime</option>
-                      <option>3D Render</option>
-                      <option>Minimal</option>
+                      <option>
+                        Cinematic
+                      </option>
+
+                      <option>
+                        Photorealistic
+                      </option>
+
+                      <option>
+                        Digital Art
+                      </option>
+
+                      <option>
+                        Anime
+                      </option>
+
+                      <option>
+                        3D Render
+                      </option>
+
+                      <option>
+                        Minimal
+                      </option>
                     </select>
+
                   </div>
 
                   <div className="control-card compact">
-                    <label>Aspect Ratio</label>
+
+                    <label>
+                      Aspect Ratio
+                    </label>
 
                     <select
                       value={ratio}
-                      onChange={(e) => setRatio(e.target.value)}
+                      onChange={(e) =>
+                        setRatio(e.target.value)
+                      }
                     >
-                      <option>16:9</option>
-                      <option>1:1</option>
-                      <option>4:5</option>
-                      <option>9:16</option>
+                      <option>
+                        16:9
+                      </option>
+
+                      <option>
+                        1:1
+                      </option>
+
+                      <option>
+                        4:5
+                      </option>
+
+                      <option>
+                        9:16
+                      </option>
+
                     </select>
+
                   </div>
 
                 </div>
@@ -279,21 +413,28 @@ function App() {
 
               </div>
 
+              {/* PREVIEW */}
               <div className="ai-preview">
 
-                {!generatedImage && !generating && (
-                  <div className="preview-empty">
+                {!generatedImage &&
+                  !generating && (
+                    <div className="preview-empty">
 
-                    <div className="preview-icon">✦</div>
+                      <div className="preview-icon">
+                        ✦
+                      </div>
 
-                    <h3>Your creation will appear here</h3>
+                      <h3>
+                        Your creation will appear here
+                      </h3>
 
-                    <p>
-                      Enter a prompt and click Generate Image.
-                    </p>
+                      <p>
+                        Enter a prompt and click
+                        Generate Image.
+                      </p>
 
-                  </div>
-                )}
+                    </div>
+                  )}
 
                 {generating && (
                   <div className="preview-empty">
@@ -302,85 +443,128 @@ function App() {
                       ✦
                     </div>
 
-                    <h3>Creating your visual...</h3>
+                    <h3>
+                      Creating your visual...
+                    </h3>
 
                     <p>
-                      SN STUDIO is preparing your preview.
+                      SN STUDIO is preparing your
+                      AI-generated image.
                     </p>
 
                   </div>
                 )}
 
-                {generatedImage && !generating && (
-                  <div className="generated-result">
+                {generatedImage &&
+                  !generating && (
+                    <div className="generated-result">
 
-                    <img
-                      src={generatedImage}
-                      alt="Generated preview"
-                    />
+                      <img
+                        src={generatedImage}
+                        alt="AI generated preview"
+                      />
 
-                    <div className="result-overlay">
+                      <div className="result-overlay">
 
-                      <div>
-                        <span>{style}</span>
-                        <span>{ratio}</span>
-                      </div>
+                        <div>
+                          <span>
+                            {style}
+                          </span>
 
-                      <div className="result-actions">
+                          <span>
+                            {ratio}
+                          </span>
+                        </div>
 
-                        <button
-                          onClick={generateImage}
-                        >
-                          ↻ Regenerate
-                        </button>
+                        <div className="result-actions">
 
-                        <button
-                          onClick={downloadImage}
-                        >
-                          ↓ Download
-                        </button>
+                          <button
+                            onClick={generateImage}
+                          >
+                            ↻ Regenerate
+                          </button>
+
+                          <button
+                            onClick={downloadImage}
+                          >
+                            ↓ Download
+                          </button>
+
+                        </div>
 
                       </div>
 
                     </div>
-
-                  </div>
-                )}
+                  )}
 
               </div>
 
             </div>
 
+            {/* INFO CARDS */}
             <div className="ai-info-grid">
 
               <div className="info-card">
-                <span>✦</span>
+
+                <span>
+                  ✦
+                </span>
+
                 <div>
-                  <strong>Describe anything</strong>
+
+                  <strong>
+                    Describe anything
+                  </strong>
+
                   <p>
-                    Write your idea naturally and build your visual concept.
+                    Write your idea naturally and
+                    build your visual concept.
                   </p>
+
                 </div>
+
               </div>
 
               <div className="info-card">
-                <span>◈</span>
+
+                <span>
+                  ◈
+                </span>
+
                 <div>
-                  <strong>Choose your style</strong>
+
+                  <strong>
+                    Choose your style
+                  </strong>
+
                   <p>
-                    Experiment with cinematic, realistic, artistic and more.
+                    Experiment with cinematic,
+                    realistic, artistic and more.
                   </p>
+
                 </div>
+
               </div>
 
               <div className="info-card">
-                <span>↓</span>
+
+                <span>
+                  ↓
+                </span>
+
                 <div>
-                  <strong>Download your work</strong>
+
+                  <strong>
+                    Download your work
+                  </strong>
+
                   <p>
-                    Save your generated preview directly to your device.
+                    Save your generated preview
+                    directly to your device.
                   </p>
+
                 </div>
+
               </div>
 
             </div>
@@ -403,20 +587,32 @@ function App() {
     );
   }
 
+  // =========================================================
+  // MAIN DASHBOARD
+  // =========================================================
+
   return (
     <div className="app-shell">
 
+      {/* SIDEBAR */}
       <aside className="sidebar">
 
         <div className="brand">
 
-          <div className="brand-mark">SN</div>
+          <div className="brand-mark">
+            SN
+          </div>
 
           <div>
-            <div className="brand-name">SN STUDIO</div>
+
+            <div className="brand-name">
+              SN STUDIO
+            </div>
+
             <div className="brand-sub">
               Creative workspace
             </div>
+
           </div>
 
         </div>
@@ -432,18 +628,31 @@ function App() {
             <button
               key={label}
               className={`nav-item ${
-                active === label ? "selected" : ""
+                active === label
+                  ? "selected"
+                  : ""
               }`}
               onClick={() => {
+
                 if (label === "AI Tools") {
+
                   setActive("AI Tools");
                   openAIImage();
+
                 } else if (label === "Dashboard") {
+
                   setActive("Dashboard");
+
                 } else {
+
                   setActive(label);
-                  action(`${label} workspace coming soon.`);
+
+                  action(
+                    `${label} workspace coming soon.`
+                  );
+
                 }
+
               }}
             >
 
@@ -451,7 +660,9 @@ function App() {
                 {icon}
               </span>
 
-              <span>{label}</span>
+              <span>
+                {label}
+              </span>
 
             </button>
 
@@ -463,14 +674,18 @@ function App() {
 
         <button
           className="nav-item"
-          onClick={() => action("Settings coming soon.")}
+          onClick={() =>
+            action("Settings coming soon.")
+          }
         >
 
           <span className="nav-icon">
             ⚙
           </span>
 
-          <span>Settings</span>
+          <span>
+            Settings
+          </span>
 
         </button>
 
@@ -500,6 +715,7 @@ function App() {
 
       </aside>
 
+      {/* MAIN */}
       <main className="main-content">
 
         <header className="topbar">
@@ -520,7 +736,9 @@ function App() {
 
             <button
               className="search-btn"
-              onClick={() => action("Search coming soon.")}
+              onClick={() =>
+                action("Search coming soon.")
+              }
             >
               ⌕ Search
               <kbd>Ctrl K</kbd>
@@ -528,7 +746,9 @@ function App() {
 
             <button
               className="upgrade-btn"
-              onClick={() => action("Upgrade system coming soon.")}
+              onClick={() =>
+                action("Upgrade system coming soon.")
+              }
             >
               Upgrade
             </button>
@@ -537,6 +757,7 @@ function App() {
 
         </header>
 
+        {/* HERO */}
         <section className="hero">
 
           <div className="hero-copy">
@@ -547,12 +768,15 @@ function App() {
 
             <h2>
               Create something{" "}
-              <em>extraordinary.</em>
+              <em>
+                extraordinary.
+              </em>
             </h2>
 
             <p>
-              Generate, edit and transform your ideas in one
-              powerful creative workspace.
+              Generate, edit and transform your
+              ideas in one powerful creative
+              workspace.
             </p>
 
             <div className="hero-actions">
@@ -567,7 +791,9 @@ function App() {
               <button
                 className="secondary-btn"
                 onClick={() =>
-                  action("Project upload coming soon.")
+                  action(
+                    "Project upload coming soon."
+                  )
                 }
               >
                 Upload Project
@@ -604,8 +830,13 @@ function App() {
             <div className="visual-card">
 
               <div className="visual-top">
-                <span>SN</span>
-                <span>STUDIO</span>
+                <span>
+                  SN
+                </span>
+
+                <span>
+                  STUDIO
+                </span>
               </div>
 
               <div className="visual-center">
@@ -622,6 +853,7 @@ function App() {
 
         </section>
 
+        {/* TOOLS */}
         <section className="section">
 
           <div className="section-head">
@@ -641,7 +873,9 @@ function App() {
             <button
               className="text-btn"
               onClick={() =>
-                action("All tools coming soon.")
+                action(
+                  "All tools coming soon."
+                )
               }
             >
               View all →
@@ -651,48 +885,59 @@ function App() {
 
           <div className="tool-grid">
 
-            {tools.map(([title, desc, icon]) => (
+            {tools.map(
+              ([title, desc, icon]) => (
 
-              <button
-                className="tool-card"
-                key={title}
-                onClick={() => {
-                  if (title === "AI Image") {
-                    openAIImage();
-                  } else {
-                    action(`${title} selected.`);
-                  }
-                }}
-              >
+                <button
+                  className="tool-card"
+                  key={title}
+                  onClick={() => {
 
-                <div className="tool-icon">
-                  {icon}
-                </div>
+                    if (title === "AI Image") {
 
-                <div className="tool-copy">
+                      openAIImage();
 
-                  <h3>
-                    {title}
-                  </h3>
+                    } else {
 
-                  <p>
-                    {desc}
-                  </p>
+                      action(
+                        `${title} selected.`
+                      );
 
-                </div>
+                    }
 
-                <span className="card-arrow">
-                  ↗
-                </span>
+                  }}
+                >
 
-              </button>
+                  <div className="tool-icon">
+                    {icon}
+                  </div>
 
-            ))}
+                  <div className="tool-copy">
+
+                    <h3>
+                      {title}
+                    </h3>
+
+                    <p>
+                      {desc}
+                    </p>
+
+                  </div>
+
+                  <span className="card-arrow">
+                    ↗
+                  </span>
+
+                </button>
+
+              )
+            )}
 
           </div>
 
         </section>
 
+        {/* PROJECTS */}
         <section className="section projects">
 
           <div className="section-head">
@@ -712,7 +957,9 @@ function App() {
             <button
               className="text-btn"
               onClick={() =>
-                action("Project library coming soon.")
+                action(
+                  "Project library coming soon."
+                )
               }
             >
               See all →
@@ -731,13 +978,16 @@ function App() {
             </h3>
 
             <p>
-              Your creative projects will appear here.
+              Your creative projects will
+              appear here.
             </p>
 
             <button
               className="primary-btn small"
               onClick={() =>
-                action("New project coming soon.")
+                action(
+                  "New project coming soon."
+                )
               }
             >
               Create your first project
