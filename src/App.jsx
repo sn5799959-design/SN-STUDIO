@@ -42,14 +42,14 @@ function App() {
   const [photoRatio, setPhotoRatio] = useState("Original");
   const [photoText, setPhotoText] = useState("");
   const [photoTextSize, setPhotoTextSize] = useState(42);
+  const [photoTextColor, setPhotoTextColor] = useState("#ffffff");
   const [photoTextX, setPhotoTextX] = useState(50);
   const [photoTextY, setPhotoTextY] = useState(50);
-  const [photoTextColor, setPhotoTextColor] = useState("#ffffff");
   const [photoShape, setPhotoShape] = useState("None");
-  const [photoShapeX, setPhotoShapeX] = useState(50);
-  const [photoShapeY, setPhotoShapeY] = useState(50);
   const [photoShapeSize, setPhotoShapeSize] = useState(180);
   const [photoShapeOpacity, setPhotoShapeOpacity] = useState(70);
+  const [photoShapeX, setPhotoShapeX] = useState(50);
+  const [photoShapeY, setPhotoShapeY] = useState(50);
   const [photoHistory, setPhotoHistory] = useState([]);
   const [photoFuture, setPhotoFuture] = useState([]);
   const photoCanvasRef = useRef(null);
@@ -152,14 +152,14 @@ function App() {
     setPhotoRatio("Original");
     setPhotoText("");
     setPhotoTextSize(42);
+    setPhotoTextColor("#ffffff");
     setPhotoTextX(50);
     setPhotoTextY(50);
-    setPhotoTextColor("#ffffff");
     setPhotoShape("None");
-    setPhotoShapeX(50);
-    setPhotoShapeY(50);
     setPhotoShapeSize(180);
     setPhotoShapeOpacity(70);
+    setPhotoShapeX(50);
+    setPhotoShapeY(50);
     setPhotoHistory([]);
     setPhotoFuture([]);
   };
@@ -212,36 +212,41 @@ function App() {
     const scale = Math.max(canvas.width / outW, canvas.height / outH) * photoZoom;
     ctx.drawImage(image, -outW * scale / 2, -outH * scale / 2, outW * scale, outH * scale);
 
-    // Phase 1 overlays: text + shape
-    ctx.save();
+    // Phase 1: render text and shapes into the exported image.
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (photoShape !== "None") {
-      ctx.globalAlpha = Math.max(0, Math.min(1, photoShapeOpacity / 100));
+      ctx.save();
+      ctx.globalAlpha = photoShapeOpacity / 100;
       ctx.fillStyle = photoTextColor;
-      const sx = (canvas.width * photoShapeX) / 100;
-      const sy = (canvas.height * photoShapeY) / 100;
-      const ss = photoShapeSize;
+      const sx = canvas.width * (photoShapeX / 100);
+      const sy = canvas.height * (photoShapeY / 100);
+      const size = photoShapeSize;
       if (photoShape === "Circle") {
         ctx.beginPath();
-        ctx.arc(sx, sy, ss / 2, 0, Math.PI * 2);
+        ctx.arc(sx, sy, size / 2, 0, Math.PI * 2);
         ctx.fill();
       } else if (photoShape === "Square") {
-        ctx.fillRect(sx - ss / 2, sy - ss / 2, ss, ss);
+        ctx.fillRect(sx - size / 2, sy - size / 2, size, size);
       } else if (photoShape === "Line") {
-        ctx.fillRect(sx - ss / 2, sy - 3, ss, 6);
+        ctx.fillRect(sx - size / 2, sy - 3, size, 6);
       }
-      ctx.globalAlpha = 1;
+      ctx.restore();
     }
     if (photoText.trim()) {
+      ctx.save();
       ctx.fillStyle = photoTextColor;
-      ctx.font = `700 ${photoTextSize}px Inter, Arial, sans-serif`;
+      ctx.font = `700 ${photoTextSize}px Arial, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.shadowColor = "rgba(0,0,0,.45)";
+      ctx.shadowColor = "rgba(0,0,0,.55)";
       ctx.shadowBlur = 8;
-      ctx.fillText(photoText, (canvas.width * photoTextX) / 100, (canvas.height * photoTextY) / 100);
+      ctx.fillText(
+        photoText,
+        canvas.width * (photoTextX / 100),
+        canvas.height * (photoTextY / 100)
+      );
+      ctx.restore();
     }
-    ctx.restore();
 
     const ext = format === "image/jpeg" ? "jpg" : format === "image/webp" ? "webp" : "png";
     const link = document.createElement("a");
@@ -509,7 +514,6 @@ function App() {
 
   if (photoStudio) {
     const setAdjust = (key, value) => {
-      pushPhotoHistory();
       setPhotoAdjust((prev) => ({ ...prev, [key]: Number(value) }));
       setPhotoFilter("Original");
     };
@@ -517,67 +521,224 @@ function App() {
     return (
       <div className="app-shell">
         <aside className="sidebar">
-          <div className="brand"><div className="brand-mark">SN</div><div><div className="brand-name">SN STUDIO</div><div className="brand-sub">Creative workspace</div></div></div>
+          <div className="brand">
+            <div className="brand-mark">SN</div>
+            <div>
+              <div className="brand-name">SN STUDIO</div>
+              <div className="brand-sub">Creative workspace</div>
+            </div>
+          </div>
           <div className="workspace-label">WORKSPACE</div>
           <nav className="nav-list">
             {nav.map(([label, icon]) => (
-              <button key={label} className={`nav-item ${active === label ? "selected" : ""}`} onClick={() => {
-                if (label === "Dashboard") closePhotoEditor();
-                else if (label === "AI Tools") openAIImage();
-                else if (label === "Photo Editor") setActive("Photo Editor");
-                else action(`${label} workspace coming soon.`);
-              }}><span className="nav-icon">{icon}</span><span>{label}</span></button>
+              <button
+                key={label}
+                className={`nav-item ${active === label ? "selected" : ""}`}
+                onClick={() => {
+                  if (label === "Dashboard") closePhotoEditor();
+                  else if (label === "AI Tools") openAIImage();
+                  else if (label === "Photo Editor") openPhotoEditor();
+                  else action(`${label} workspace coming soon.`);
+                }}
+              >
+                <span className="nav-icon">{icon}</span>
+                <span>{label}</span>
+              </button>
             ))}
           </nav>
           <div className="sidebar-spacer" />
-          <button className="nav-item" onClick={() => action("Settings coming soon.")}><span className="nav-icon">⚙</span><span>Settings</span></button>
-          <div className="profile-card"><div className="avatar">S</div><div className="profile-copy"><strong>Sangram</strong><span>Free workspace</span></div><span className="dots">•••</span></div>
+          <button className="nav-item" onClick={() => action("Settings coming soon.")}>
+            <span className="nav-icon">⚙</span><span>Settings</span>
+          </button>
+          <div className="profile-card">
+            <div className="avatar">S</div>
+            <div className="profile-copy"><strong>Sangram</strong><span>Free workspace</span></div>
+            <span className="dots">•••</span>
+          </div>
         </aside>
 
         <main className="main-content">
           <header className="topbar">
-            <div><div className="eyebrow">PHOTO EDITING TOOL</div><h1>Photo Editor</h1></div>
+            <div>
+              <div className="eyebrow">PHOTO EDITING TOOL</div>
+              <h1>Photo Editor</h1>
+            </div>
             <div className="top-actions">
               <button className="secondary-btn" onClick={undoPhoto}>↶ Undo</button>
               <button className="secondary-btn" onClick={redoPhoto}>↷ Redo</button>
-              <button className="upgrade-btn" onClick={() => exportPhoto("image/png")}>Export</button>
+              <button className="upgrade-btn" onClick={() => exportPhoto("image/png")}>Export PNG</button>
             </div>
           </header>
 
-          <section className="ai-workspace" style={{paddingTop: 18}}>
+          <section className="ai-workspace" style={{paddingTop:18}}>
             <div className="ai-header">
-              <div><button className="text-btn" onClick={closePhotoEditor}>← Back to Dashboard</button><h2>Professional Photo Editor</h2><p>Edit locally in your browser — fast, private and API-free.</p></div>
+              <div>
+                <button className="text-btn" onClick={closePhotoEditor}>← Back to Dashboard</button>
+                <h2>Professional Photo Editor</h2>
+                <p>Adjust, crop, add text and shapes — all locally in your browser.</p>
+              </div>
               <div className="ai-badge">◈ PHOTO EDITOR</div>
             </div>
 
             {!photoPreview ? (
-              <div className="upload-card" style={{minHeight: 420, display:"grid", placeItems:"center", textAlign:"center"}}>
-                <div><div style={{fontSize:52, marginBottom:12}}>◈</div><h3>Start editing a photo</h3><p>PNG, JPG or WebP · up to 20 MB</p><label className="primary-btn" style={{display:"inline-flex", cursor:"pointer", marginTop:14}}>Upload Photo<input type="file" accept="image/*" onChange={handlePhotoFile} hidden /></label></div>
+              <div className="upload-card" style={{minHeight:420,display:"grid",placeItems:"center",textAlign:"center"}}>
+                <div>
+                  <div style={{fontSize:52,marginBottom:12}}>◈</div>
+                  <h3>Start editing a photo</h3>
+                  <p>PNG, JPG or WebP · up to 20 MB</p>
+                  <label className="primary-btn" style={{display:"inline-flex",cursor:"pointer",marginTop:14}}>
+                    Upload Photo
+                    <input type="file" accept="image/*" onChange={handlePhotoFile} hidden />
+                  </label>
+                </div>
               </div>
             ) : (
-              <div style={{display:"grid", gridTemplateColumns:"minmax(0,1fr) 320px", gap:18, alignItems:"stretch"}}>
-                <div className="preview-card" style={{minHeight:600, padding:18, background:"#11131a", borderRadius:20, display:"flex", flexDirection:"column"}}>
-                  <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12}}><strong>Canvas</strong><div style={{display:"flex", gap:8}}><button className="secondary-btn" onClick={() => setPhotoZoom(Math.max(.5, photoZoom-.1))}>−</button><span style={{padding:"10px 4px", minWidth:52, textAlign:"center"}}>{Math.round(photoZoom*100)}%</span><button className="secondary-btn" onClick={() => setPhotoZoom(Math.min(2, photoZoom+.1))}>+</button></div></div>
-                  <div style={{flex:1, minHeight:500, display:"grid", placeItems:"center", overflow:"hidden", borderRadius:16, background:"repeating-conic-gradient(#20232d 0 25%, #181a22 0 50%) 50% / 22px 22px"}}>
-                    <img src={photoPreview} alt="Editing preview" style={{maxWidth:"90%", maxHeight:"90%", objectFit:"contain", filter:photoCssFilter, transform:`rotate(${photoRotation}deg) scale(${photoZoom}) scaleX(${photoFlipX ? -1 : 1}) scaleY(${photoFlipY ? -1 : 1})`, transition:"filter .15s, transform .15s"}} />
+              <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 340px",gap:18,alignItems:"stretch"}}>
+                <div className="preview-card" style={{minHeight:620,padding:18,background:"#11131a",borderRadius:20,display:"flex",flexDirection:"column"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                    <strong>Canvas</strong>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <button className="secondary-btn" onClick={() => setPhotoZoom(Math.max(.5,photoZoom-.1))}>−</button>
+                      <span style={{minWidth:52,textAlign:"center"}}>{Math.round(photoZoom*100)}%</span>
+                      <button className="secondary-btn" onClick={() => setPhotoZoom(Math.min(2,photoZoom+.1))}>+</button>
+                    </div>
                   </div>
-                  <div style={{display:"flex", gap:8, flexWrap:"wrap", marginTop:12}}>
-                    <button className="secondary-btn" onClick={() => {pushPhotoHistory(); setPhotoRotation((v)=>v-90)}}>↺ Rotate</button>
-                    <button className="secondary-btn" onClick={() => {pushPhotoHistory(); setPhotoFlipX(v=>!v)}}>↔ Flip X</button>
-                    <button className="secondary-btn" onClick={() => {pushPhotoHistory(); setPhotoFlipY(v=>!v)}}>↕ Flip Y</button>
+
+                  <div style={{flex:1,minHeight:500,position:"relative",display:"grid",placeItems:"center",overflow:"hidden",borderRadius:16,background:"repeating-conic-gradient(#20232d 0 25%, #181a22 0 50%) 50% / 22px 22px"}}>
+                    <img
+                      src={photoPreview}
+                      alt="Editing preview"
+                      style={{
+                        maxWidth:"90%",maxHeight:"90%",objectFit:"contain",
+                        filter:photoCssFilter,
+                        transform:`rotate(${photoRotation}deg) scale(${photoZoom}) scaleX(${photoFlipX?-1:1}) scaleY(${photoFlipY?-1:1})`,
+                        transition:"filter .15s, transform .15s"
+                      }}
+                    />
+
+                    {photoShape !== "None" && (
+                      <div
+                        style={{
+                          position:"absolute",
+                          left:`${photoShapeX}%`,
+                          top:`${photoShapeY}%`,
+                          width:photoShape==="Line" ? photoShapeSize : photoShapeSize,
+                          height:photoShape==="Line" ? 6 : photoShapeSize,
+                          transform:"translate(-50%,-50%)",
+                          borderRadius:photoShape==="Circle" ? "50%" : 8,
+                          background:photoTextColor,
+                          opacity:photoShapeOpacity/100,
+                          pointerEvents:"none"
+                        }}
+                      />
+                    )}
+
+                    {photoText.trim() && (
+                      <div
+                        style={{
+                          position:"absolute",
+                          left:`${photoTextX}%`,
+                          top:`${photoTextY}%`,
+                          transform:"translate(-50%,-50%)",
+                          color:photoTextColor,
+                          fontSize:photoTextSize,
+                          fontWeight:800,
+                          lineHeight:1.1,
+                          whiteSpace:"nowrap",
+                          textShadow:"0 4px 12px rgba(0,0,0,.65)",
+                          pointerEvents:"none"
+                        }}
+                      >
+                        {photoText}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
+                    <button className="secondary-btn" onClick={() => {setPhotoRotation(v=>v-90)}}>↺ Rotate</button>
+                    <button className="secondary-btn" onClick={() => setPhotoFlipX(v=>!v)}>↔ Flip X</button>
+                    <button className="secondary-btn" onClick={() => setPhotoFlipY(v=>!v)}>↕ Flip Y</button>
                     <button className="secondary-btn" onClick={resetPhoto}>Reset</button>
                   </div>
                 </div>
 
-                <aside style={{background:"#11131a", borderRadius:20, padding:18, maxHeight:650, overflowY:"auto"}}>
-                  <div style={{fontWeight:800, marginBottom:14}}>Adjustments</div>
-                  {[["Brightness","brightness",40,160], ["Contrast","contrast",40,160], ["Saturation","saturation",0,180], ["Blur","blur",0,12], ["Grayscale","grayscale",0,100], ["Sepia","sepia",0,100]].map(([label,key,min,max]) => <label key={key} style={{display:"block", marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}><span>{label}</span><span>{photoAdjust[key]}{key === "blur" ? "px" : "%"}</span></div><input type="range" min={min} max={max} value={photoAdjust[key]} onChange={(e)=>setAdjust(key,e.target.value)} style={{width:"100%"}} /></label>)}
-                  <div style={{fontWeight:800, margin:"22px 0 10px"}}>Presets</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{["Original","Cinematic","Portrait","Vintage","Moody","Warm","Cool","Mono"].map((f)=><button key={f} className="secondary-btn" onClick={()=>{pushPhotoHistory();setPhotoFilter(f)}} style={{padding:"10px 8px"}}>{f}</button>)}</div>
-                  <div style={{fontWeight:800, margin:"22px 0 10px"}}>Crop ratio</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{["Original","1:1","4:5","16:9","9:16"].map((r)=><button key={r} className={`secondary-btn ${photoRatio===r ? "selected" : ""}`} onClick={()=>{pushPhotoHistory();setPhotoRatio(r)}}>{r}</button>)}</div>
-                  <div style={{fontWeight:800, margin:"22px 0 10px"}}>Export</div>
-                  <div style={{display:"grid",gap:8}}><button className="primary-btn" onClick={()=>exportPhoto("image/png")}>Download PNG</button><button className="secondary-btn" onClick={()=>exportPhoto("image/jpeg")}>Download JPG</button><button className="secondary-btn" onClick={()=>exportPhoto("image/webp")}>Download WebP</button></div>
+                <aside style={{background:"#11131a",borderRadius:20,padding:18,maxHeight:680,overflowY:"auto"}}>
+                  <div style={{fontWeight:800,marginBottom:14}}>Adjustments</div>
+                  {[
+                    ["Brightness","brightness",40,160],
+                    ["Contrast","contrast",40,160],
+                    ["Saturation","saturation",0,180],
+                    ["Blur","blur",0,12],
+                    ["Grayscale","grayscale",0,100],
+                    ["Sepia","sepia",0,100]
+                  ].map(([label,key,min,max]) => (
+                    <label key={key} style={{display:"block",marginBottom:16}}>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}>
+                        <span>{label}</span><span>{photoAdjust[key]}{key==="blur"?"px":"%"}</span>
+                      </div>
+                      <input type="range" min={min} max={max} value={photoAdjust[key]} onChange={(e)=>setAdjust(key,e.target.value)} style={{width:"100%"}} />
+                    </label>
+                  ))}
+
+                  <div style={{fontWeight:800,margin:"22px 0 10px"}}>Presets</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    {["Original","Cinematic","Portrait","Vintage","Moody","Warm","Cool","Mono"].map((f)=>(
+                      <button key={f} className={`secondary-btn ${photoFilter===f?"selected":""}`} onClick={()=>setPhotoFilter(f)} style={{padding:"10px 8px"}}>{f}</button>
+                    ))}
+                  </div>
+
+                  <div style={{fontWeight:800,margin:"22px 0 10px"}}>Crop ratio</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    {["Original","1:1","4:5","16:9","9:16"].map((r)=>(
+                      <button key={r} className={`secondary-btn ${photoRatio===r?"selected":""}`} onClick={()=>setPhotoRatio(r)}>{r}</button>
+                    ))}
+                  </div>
+
+                  <div style={{fontWeight:800,margin:"22px 0 10px"}}>Text</div>
+                  <input
+                    value={photoText}
+                    onChange={(e)=>setPhotoText(e.target.value)}
+                    placeholder="Type text here..."
+                    style={{width:"100%",boxSizing:"border-box",padding:"11px 12px",borderRadius:10,border:"1px solid rgba(255,255,255,.12)",background:"#0b0d12",color:"#fff"}}
+                  />
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 72px",gap:10,marginTop:10}}>
+                    <label style={{fontSize:12}}>
+                      Size
+                      <input type="range" min="16" max="120" value={photoTextSize} onChange={(e)=>setPhotoTextSize(Number(e.target.value))} style={{width:"100%"}} />
+                    </label>
+                    <label style={{fontSize:12}}>
+                      Color
+                      <input type="color" value={photoTextColor} onChange={(e)=>setPhotoTextColor(e.target.value)} style={{width:"100%",height:32,padding:0}} />
+                    </label>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:10}}>
+                    <label style={{fontSize:12}}>X<input type="range" min="5" max="95" value={photoTextX} onChange={(e)=>setPhotoTextX(Number(e.target.value))} style={{width:"100%"}} /></label>
+                    <label style={{fontSize:12}}>Y<input type="range" min="5" max="95" value={photoTextY} onChange={(e)=>setPhotoTextY(Number(e.target.value))} style={{width:"100%"}} /></label>
+                  </div>
+
+                  <div style={{fontWeight:800,margin:"22px 0 10px"}}>Shapes</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    {["None","Circle","Square","Line"].map((s)=>(
+                      <button key={s} className={`secondary-btn ${photoShape===s?"selected":""}`} onClick={()=>setPhotoShape(s)}>{s}</button>
+                    ))}
+                  </div>
+                  {photoShape !== "None" && (
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:10}}>
+                      <label style={{fontSize:12}}>Size<input type="range" min="30" max="500" value={photoShapeSize} onChange={(e)=>setPhotoShapeSize(Number(e.target.value))} style={{width:"100%"}} /></label>
+                      <label style={{fontSize:12}}>Opacity<input type="range" min="10" max="100" value={photoShapeOpacity} onChange={(e)=>setPhotoShapeOpacity(Number(e.target.value))} style={{width:"100%"}} /></label>
+                    </div>
+                  )}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:10}}>
+                    <label style={{fontSize:12}}>Shape X<input type="range" min="5" max="95" value={photoShapeX} onChange={(e)=>setPhotoShapeX(Number(e.target.value))} style={{width:"100%"}} /></label>
+                    <label style={{fontSize:12}}>Shape Y<input type="range" min="5" max="95" value={photoShapeY} onChange={(e)=>setPhotoShapeY(Number(e.target.value))} style={{width:"100%"}} /></label>
+                  </div>
+
+                  <div style={{fontWeight:800,margin:"22px 0 10px"}}>Export</div>
+                  <div style={{display:"grid",gap:8}}>
+                    <button className="primary-btn" onClick={()=>exportPhoto("image/png")}>Download PNG</button>
+                    <button className="secondary-btn" onClick={()=>exportPhoto("image/jpeg")}>Download JPG</button>
+                    <button className="secondary-btn" onClick={()=>exportPhoto("image/webp")}>Download WebP</button>
+                  </div>
                 </aside>
               </div>
             )}
