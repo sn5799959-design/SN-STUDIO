@@ -1607,6 +1607,10 @@ function App() {
 
                       openAIImage();
 
+                    } else if (title === "Photo Editor") {
+
+                      openPhotoEditor();
+
                     } else if (title === "Background") {
 
                       openBackground();
