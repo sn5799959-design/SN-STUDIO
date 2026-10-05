@@ -40,6 +40,16 @@ function App() {
   const [photoFlipY, setPhotoFlipY] = useState(false);
   const [photoZoom, setPhotoZoom] = useState(1);
   const [photoRatio, setPhotoRatio] = useState("Original");
+  const [photoText, setPhotoText] = useState("");
+  const [photoTextSize, setPhotoTextSize] = useState(42);
+  const [photoTextX, setPhotoTextX] = useState(50);
+  const [photoTextY, setPhotoTextY] = useState(50);
+  const [photoTextColor, setPhotoTextColor] = useState("#ffffff");
+  const [photoShape, setPhotoShape] = useState("None");
+  const [photoShapeX, setPhotoShapeX] = useState(50);
+  const [photoShapeY, setPhotoShapeY] = useState(50);
+  const [photoShapeSize, setPhotoShapeSize] = useState(180);
+  const [photoShapeOpacity, setPhotoShapeOpacity] = useState(70);
   const [photoHistory, setPhotoHistory] = useState([]);
   const [photoFuture, setPhotoFuture] = useState([]);
   const photoCanvasRef = useRef(null);
@@ -140,6 +150,16 @@ function App() {
     setPhotoFlipY(false);
     setPhotoZoom(1);
     setPhotoRatio("Original");
+    setPhotoText("");
+    setPhotoTextSize(42);
+    setPhotoTextX(50);
+    setPhotoTextY(50);
+    setPhotoTextColor("#ffffff");
+    setPhotoShape("None");
+    setPhotoShapeX(50);
+    setPhotoShapeY(50);
+    setPhotoShapeSize(180);
+    setPhotoShapeOpacity(70);
     setPhotoHistory([]);
     setPhotoFuture([]);
   };
@@ -191,6 +211,38 @@ function App() {
     ctx.scale(photoFlipX ? -1 : 1, photoFlipY ? -1 : 1);
     const scale = Math.max(canvas.width / outW, canvas.height / outH) * photoZoom;
     ctx.drawImage(image, -outW * scale / 2, -outH * scale / 2, outW * scale, outH * scale);
+
+    // Phase 1 overlays: text + shape
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (photoShape !== "None") {
+      ctx.globalAlpha = Math.max(0, Math.min(1, photoShapeOpacity / 100));
+      ctx.fillStyle = photoTextColor;
+      const sx = (canvas.width * photoShapeX) / 100;
+      const sy = (canvas.height * photoShapeY) / 100;
+      const ss = photoShapeSize;
+      if (photoShape === "Circle") {
+        ctx.beginPath();
+        ctx.arc(sx, sy, ss / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (photoShape === "Square") {
+        ctx.fillRect(sx - ss / 2, sy - ss / 2, ss, ss);
+      } else if (photoShape === "Line") {
+        ctx.fillRect(sx - ss / 2, sy - 3, ss, 6);
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (photoText.trim()) {
+      ctx.fillStyle = photoTextColor;
+      ctx.font = `700 ${photoTextSize}px Inter, Arial, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(0,0,0,.45)";
+      ctx.shadowBlur = 8;
+      ctx.fillText(photoText, (canvas.width * photoTextX) / 100, (canvas.height * photoTextY) / 100);
+    }
+    ctx.restore();
+
     const ext = format === "image/jpeg" ? "jpg" : format === "image/webp" ? "webp" : "png";
     const link = document.createElement("a");
     link.href = canvas.toDataURL(format, format === "image/png" ? undefined : 0.92);
@@ -472,7 +524,7 @@ function App() {
               <button key={label} className={`nav-item ${active === label ? "selected" : ""}`} onClick={() => {
                 if (label === "Dashboard") closePhotoEditor();
                 else if (label === "AI Tools") openAIImage();
-                else if (label === "Photo Editor") openPhotoEditor();
+                else if (label === "Photo Editor") setActive("Photo Editor");
                 else action(`${label} workspace coming soon.`);
               }}><span className="nav-icon">{icon}</span><span>{label}</span></button>
             ))}
