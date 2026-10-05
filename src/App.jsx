@@ -156,7 +156,8 @@ function App() {
       const imageData = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error("Could not read the image."));
+        reader.onerror = () =>
+          reject(new Error("Could not read the image."));
         reader.readAsDataURL(backgroundFile);
       });
 
@@ -173,7 +174,17 @@ function App() {
         }
       );
 
-      const data = await response.json();
+      const responseText = await response.text();
+      let data;
+
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(
+          responseText ||
+            `Background removal failed (HTTP ${response.status}).`
+        );
+      }
 
       if (!response.ok || !data.success) {
         throw new Error(
@@ -198,7 +209,9 @@ function App() {
       const mask = bestSegment.mask;
 
       if (!mask) {
-        throw new Error("The AI service returned an invalid mask.");
+        throw new Error(
+          "The AI service returned an invalid mask."
+        );
       }
 
       const transparentPng = await composeTransparentPng(
