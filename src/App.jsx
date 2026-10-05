@@ -472,7 +472,7 @@ function App() {
               <button key={label} className={`nav-item ${active === label ? "selected" : ""}`} onClick={() => {
                 if (label === "Dashboard") closePhotoEditor();
                 else if (label === "AI Tools") openAIImage();
-                else if (label === "Photo Editor") setActive("Photo Editor");
+                else if (label === "Photo Editor") openPhotoEditor();
                 else action(`${label} workspace coming soon.`);
               }}><span className="nav-icon">{icon}</span><span>{label}</span></button>
             ))}
